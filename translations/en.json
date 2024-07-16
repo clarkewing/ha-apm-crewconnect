@@ -1,0 +1,57 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Device is already configured"
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication",
+            "unknown": "Unexpected error"
+        },
+        "flow_title": "APM CrewConnect Setup",
+        "step": {
+            "authorize": {
+                "data": {
+                    "auth_redirect": "Authorization Redirect URL"
+                },
+                "data_description": {
+                    "auth_redirect": "Retrieve the full authorization redirect from Chrome DevTools"
+                },
+                "description": "Using Chrome with the DevTools console open, please login at:\n\n{auth_url}\n\nThen, enter the redirect URL below."
+            },
+            "user": {
+                "data": {
+                    "host": "Host"
+                },
+                "data_description": {
+                    "host": "This is sometimes referred to as the Service URL"
+                },
+                "description": "Enter the host for your APM CrewConnect instance."
+            }
+        }
+    },
+    "services": {
+        "find_unstaffed_flights": {
+            "description": "Finds flights matching the specified criteria for which crew members are missing.",
+            "fields": {
+                "aircraft_type": {
+                    "description": "The type of aircraft to filter by.",
+                    "name": "Aircraft type"
+                },
+                "end_date": {
+                    "description": "If provided, the end of the date range to search (inclusive).",
+                    "name": "End date"
+                },
+                "role": {
+                    "description": "The crew role to filter by.",
+                    "name": "Role"
+                },
+                "start_date": {
+                    "description": "The start of the date range to search.",
+                    "name": "Start date"
+                }
+            },
+            "name": "Find unstaffed flights"
+        }
+    }
+}
