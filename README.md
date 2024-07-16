@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://github.com/ShaanCoding/ReadME-Generator">
-    <img src="https://play-lh.googleusercontent.com/cNuzgA2pNErASAWldcvWjZm8vTBj5GGamXlPw4bc6-rgMGvY2q2R0M1NBBM7DPNOjO2F" alt="Logo" width="80" height="80">
+    <img src="https://brands.home-assistant.io/apm/icon@2x.png" alt="APM CrewConnect logo" width="80" height="80">
   </a>
   <h3 align="center">APM CrewConnect for Home Assistant</h3>
   <p align="center">
