@@ -64,7 +64,7 @@ async def async_register_services(hass: HomeAssistant) -> None:
             {
                 vol.Required(ATTR_START_DATE): cv.date,
                 vol.Optional(ATTR_END_DATE): cv.date,
-                vol.Optional(ATTR_ACFT_TYPE): vol.In(ACFT_TYPES),
+                vol.Required(ATTR_ACFT_TYPE): vol.In(ACFT_TYPES),
                 vol.Optional(ATTR_ROLE): vol.In(ROLES),
             }
         ),

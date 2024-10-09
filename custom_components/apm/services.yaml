@@ -11,6 +11,7 @@ find_unstaffed_flights:
       selector:
         date:
     aircraft_type:
+      required: true
       selector:
         select:
           options:
