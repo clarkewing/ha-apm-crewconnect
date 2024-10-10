@@ -10,8 +10,8 @@ from apm_crewconnect import Apm
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.util import Throttle
 
+from .calendar import ApmCalendar
 from .const import CONF_APM_TOKEN, CONF_OKTA_TOKEN, DOMAIN
 from .services import async_register_services
 
@@ -22,20 +22,24 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=300)
 async def async_setup(hass, config):
     """Track states and offer events for sensors."""
     return True
-    
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up APM CrewConnect from a config entry."""
     host = entry.data[CONF_HOST]
 
+    # Initialize ApmData
     data = ApmData(hass, entry, host)
-
     await data.setup()
 
+    # Store ApmData for future use
     hass.data[DOMAIN] = data
 
-    # await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # This creates each HA object for each platform your device requires.
+    # It's done by calling the `async_setup_entry` function in each platform module.
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Register other services
     await async_register_services(hass)
 
     return True
@@ -44,6 +48,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
     if unload_ok:
         hass.data.pop(DOMAIN)
     return unload_ok
@@ -77,11 +82,11 @@ class ApmData:
             )
         )
 
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)
-    async def update(self):
-        """Get the latest data from APM."""
-        assert isinstance(self.apm, Apm)
-        await self._hass.async_add_executor_job(self.apm.update)
+    # @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    # async def update(self):
+    #     """Get the latest data from APM."""
+    #     assert isinstance(self.apm, Apm)
+    #     await self._hass.async_add_executor_job(self.apm.update)
 
 
 class TokenManager:
