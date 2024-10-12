@@ -1,8 +1,14 @@
 """Services registry for APM CrewConnect."""
 
+from .util.ical import iCal
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.core import (
+    HomeAssistant,
+    SupportsResponse,
+    ServiceCall,
+    ServiceResponse,
+)
 import homeassistant.helpers.config_validation as cv
 from homeassistant.util.json import JsonObjectType
 
@@ -12,6 +18,7 @@ from .const import (
     ATTR_END_DATE,
     ATTR_ROLE,
     ATTR_START_DATE,
+    ATTR_SAVE_TO_FILE,
     DOMAIN,
     ROLES,
 )
@@ -66,6 +73,36 @@ async def async_register_services(hass: HomeAssistant) -> None:
                 vol.Optional(ATTR_END_DATE): cv.date,
                 vol.Required(ATTR_ACFT_TYPE): vol.In(ACFT_TYPES),
                 vol.Optional(ATTR_ROLE): vol.In(ROLES),
+            }
+        ),
+        supports_response=SupportsResponse.ONLY,
+    )
+
+    def generate_roster_ical(service: ServiceCall) -> ServiceResponse:
+        """Generate a roster iCal."""
+        roster = data.apm.get_roster(
+            service.data[ATTR_START_DATE],
+            service.data[ATTR_END_DATE],
+        )
+
+        ical = iCal.from_roster(roster)
+
+        if service.data[ATTR_SAVE_TO_FILE]:
+            ical.to_file("/config/" + roster.user_id + "_apm_roster.ics")
+
+        return {
+            "ical": ical.to_str(),
+        }
+
+    hass.services.async_register(
+        DOMAIN,
+        "generate_roster_ical",
+        generate_roster_ical,
+        schema=vol.Schema(
+            {
+                vol.Required(ATTR_START_DATE): cv.date,
+                vol.Required(ATTR_END_DATE): cv.date,
+                vol.Required(ATTR_SAVE_TO_FILE, default=False): cv.boolean,
             }
         ),
         supports_response=SupportsResponse.ONLY,

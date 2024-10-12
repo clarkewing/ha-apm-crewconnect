@@ -30,3 +30,18 @@ find_unstaffed_flights:
             - "CA"
             - "SUPC"
             - "SOL"
+
+generate_roster_ical:
+  fields:
+    start_date:
+      required: true
+      selector:
+        date:
+    end_date:
+      required: true
+      selector:
+        date:
+    save_to_file:
+      required: true
+      selector:
+        boolean:

@@ -10,6 +10,7 @@ ATTR_START_DATE = "start_date"
 ATTR_END_DATE = "end_date"
 ATTR_ACFT_TYPE = "aircraft_type"
 ATTR_ROLE = "role"
+ATTR_SAVE_TO_FILE = "save_to_file"
 
 ACFT_TYPES = ["73H", "32N"]
 ROLES = ["CDB", "OPL", "SUPT", "INS", "CC", "CA", "SUPC", "SOL"]
