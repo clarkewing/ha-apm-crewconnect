@@ -33,20 +33,33 @@ class ApmCalendar(CalendarEntity):
     ) -> None:
         """Initialize the calendar entity."""
         self._hass = hass
-        self._events = []
+        self._roster = None
         self.data = hass.data[DOMAIN]
 
     @property
-    def name(self) -> str:
+    def unique_id(self) -> str | None:
+        """Return the unique ID of the calendar."""
+        return "apm_roster_" + self.data.apm.user_id
+
+    @property
+    def name(self) -> str | None:
         """Return the name of the calendar."""
         return "APM Roster" + " [" + self.data.apm.user_id + "]"
 
     @property
     def event(self) -> CalendarEvent | None:
         """Return the next upcoming event."""
-        upcoming_events = [event for event in self._events if event.start > now()]
+        upcoming_activities = [
+            activity
+            for activity in (self._roster.activities if self._roster else [])
+            if activity.start > now()
+        ]
 
-        return upcoming_events[0] if upcoming_events else None
+        return (
+            self._parse_activity_to_event(upcoming_activities[0])
+            if upcoming_activities
+            else None
+        )
 
     async def async_get_events(
         self,
@@ -55,20 +68,17 @@ class ApmCalendar(CalendarEntity):
         end_date: datetime,
     ) -> list[CalendarEvent]:
         """Return calendar events within a datetime range."""
-        # Check if the events within the requested date range are already fetched
-        if not self._is_events_in_range(start_date, end_date):
+        # Check if the events within the requested date range are already loaded
+        if not self._range_loaded(start_date, end_date):
             # Fetch new events for the requested date range
-            self.append_events_to_state(
-                await hass.async_add_executor_job(
-                    self.fetch_events, start_date.date(), end_date.date()
-                )
+            await hass.async_add_executor_job(
+                self.fetch_roster, start_date.date(), end_date.date()
             )
 
         # Return events within the requested date range
         return [
-            event
-            for event in self._events
-            if event.start >= start_date and event.end <= end_date
+            self._parse_activity_to_event(activity)
+            for activity in self._activities_in_range(start_date, end_date)
         ]
 
     async def async_update(self) -> None:
@@ -77,61 +87,73 @@ class ApmCalendar(CalendarEntity):
         start_date = now().date()
         end_date = start_date + timedelta(days=30)
 
-        # Parse roster into events
-        self.append_events_to_state(
-            await self._hass.async_add_executor_job(
-                self.fetch_events, start_date, end_date
-            )
-        )
+        # Fetch roster
+        await self._hass.async_add_executor_job(self.fetch_roster, start_date, end_date)
 
-    def fetch_events(self, start_date: date, end_date: date) -> list[CalendarEvent]:
+    def fetch_roster(self, start_date: date, end_date: date) -> None:
         """Fetch events from APM service (blocking)."""
-        roster = self.data.apm.get_roster(start_date, end_date)
-
-        return self._parse_roster_to_events(roster)
-
-    def append_events_to_state(self, events: list[CalendarEvent]) -> None:
-        # Convert existing events to a dict
-        unique_events = {self._event_key(event): event for event in self._events}
-
-        # Add new events, automatically filtering duplicates
-        unique_events.update({self._event_key(event): event for event in events})
-
-        self._events = sorted(
-            list(unique_events.values()),
-            key=lambda event: event.start,
-        )
+        self._load_roster(self.data.apm.get_roster(start_date, end_date))
 
     def _parse_roster_to_events(self, roster: Roster) -> list[CalendarEvent]:
         """Convert roster into CalendarEvent objects."""
         return sorted(
-            [
-                CalendarEvent(
-                    start=activity.start,
-                    end=activity.end,
-                    summary=activity.title,
-                    description=activity.details,
-                )
-                for activity in roster.activities
-            ],
+            [self._parse_activity_to_event(activity) for activity in roster.activities],
             key=lambda event: event.start,
         )
 
-    def _is_events_in_range(self, start_date, end_date) -> bool:
-        """Check if we have events within the specified date range."""
-        if not self._events:
+    def _parse_activity_to_event(self, activity) -> CalendarEvent:
+        return CalendarEvent(
+            start=activity.start,
+            end=activity.end,
+            summary=activity.title,
+            description=activity.details,
+        )
+
+    def _range_loaded(self, start_date: datetime, end_date: datetime) -> bool:
+        """Check if we have the roster loaded for the specified date range."""
+        if not self._roster:
             return False
 
-        # Assuming the events are sorted, check the range
-        first_event = self._events[0].start
-        last_event = self._events[-1].end
-        return start_date >= first_event and end_date <= last_event
-
-    def _event_key(self, event: CalendarEvent) -> str:
+        # Check if the specified range is within the loaded roster's bounds
+        # and if there are any loaded activities within the specified range
+        # This can result in more API calls than necessary but ensures nothing gets missed
         return (
-            str(event.start.timestamp())
-            + "-"
-            + str(event.end.timestamp())
-            + "-"
-            + event.summary
+            self._roster.start <= start_date.date()
+            and end_date.date() <= self._roster.end
+            and len(self._activities_in_range(start_date, end_date)) > 0
         )
+
+    def _activities_in_range(self, start_date: datetime, end_date: datetime):
+        return [
+            activity
+            for activity in self._roster.activities
+            if activity.start >= start_date and activity.end <= end_date
+        ]
+
+    def _load_roster(self, new_roster: Roster) -> None:
+        """Load a new roster into the existing one, overwriting the overlapping date range with activities from new_roster."""
+        if not self._roster:
+            self._roster = new_roster
+            return
+
+        activities = [
+            activity
+            for activity in self._roster.activities
+            if (
+                activity.end.date() < new_roster.start
+                and activity.start.date() > new_roster.end
+            )
+        ]
+
+        activities.extend(new_roster.activities)
+
+        activities = sorted(
+            activities,
+            key=lambda activity: activity.start,
+        )
+
+        self._roster.activities = activities
+        if new_roster.start < self._roster.start:
+            self._roster.start = new_roster.start
+        if self._roster.end < new_roster.end:
+            self._roster.end = new_roster.end
