@@ -4,6 +4,7 @@ from apm_crewconnect import (
     Roster,
     Activity,
     FlightActivity,
+    GroundActivity,
     DeadheadActivity,
     HotelActivity,
     utils as apm_utils,
@@ -106,6 +107,8 @@ class iCal:
                 + "*"
                 + activity.destination_iata_code,
             )
+        elif isinstance(activity, GroundActivity):
+            self._add_line("SUMMARY", " " + activity.description)
         else:
             self._add_line("SUMMARY", " " + activity.details)
 
@@ -152,7 +155,10 @@ class iCal:
                             (
                                 (
                                     "BLK : "
-                                    + apm_utils.timedelta_to_str(activity.block_time)
+                                    + apm_utils.timedelta_to_str(
+                                        activity.block_time,
+                                        "{:02}:{:02}",
+                                    )
                                 )
                                 if hasattr(activity, "block_time")
                                 else None
