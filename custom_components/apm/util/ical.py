@@ -60,6 +60,9 @@ class iCal:
         if isinstance(activity, HotelActivity):
             return
 
+        if activity.is_pending:
+            return
+
         self._add_line()
         self._add_line("BEGIN", "VEVENT")
         self._add_line(
